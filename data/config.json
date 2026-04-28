@@ -1,0 +1,11 @@
+[
+    {
+        "index": 1,
+        "type": "SERVO_MOTOR",
+        "config": {
+            "SERVO_PIN": 5,
+            "MIN_POSITION": 0,
+            "MAX_POSITION": 180
+        }
+    }
+]

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SERVO_ARM simulation</title>
+<style>
+    body {
+        margin: 0;
+        padding: 1rem;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f5f6f8;
+        color: #1d2939;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1rem;
+        min-height: 100vh;
+    }
+    h1 { margin: 0 0 0.5rem 0; font-size: 1.1rem; }
+    h2 { margin: 0.75rem 0 0.35rem 0; font-size: 0.85rem; color: #667085; text-transform: uppercase; letter-spacing: 0.05em; }
+    .panel {
+        background: white;
+        border: 1px solid #e4e7ec;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    .controls { font-size: 0.9rem; }
+    .param {
+        margin: 0.4rem 0;
+        display: grid;
+        grid-template-columns: 100px 1fr 50px;
+        gap: 0.4rem;
+        align-items: center;
+    }
+    .param label { color: #344054; }
+    .param .val { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 0.85rem; text-align: right; color: #667085; }
+    input[type=range] { width: 100%; }
+    input[type=number] { width: 100%; padding: 0.2rem 0.4rem; border: 1px solid #d0d5dd; border-radius: 4px; font-family: inherit; font-size: 0.85rem; }
+    .readout {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e4e7ec;
+        font-family: 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+    }
+    .readout-row { display: flex; justify-content: space-between; padding: 0.1rem 0; }
+    .status { margin-top: 0.5rem; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem; }
+    .status.ok    { background: #d1fadf; color: #027a48; }
+    .status.warn  { background: #fef0c7; color: #b54708; }
+    .status.err   { background: #fee4e2; color: #b42318; }
+    canvas { display: block; background: white; border: 1px solid #e4e7ec; border-radius: 8px; }
+    .legend { font-size: 0.8rem; color: #667085; margin-top: 0.5rem; line-height: 1.5; }
+    .legend span.dot { display: inline-block; width: 0.8rem; height: 0.8rem; vertical-align: middle; margin-right: 0.3rem; border-radius: 2px; }
+    details { margin-top: 0.75rem; font-size: 0.85rem; }
+    details pre { background: #f5f6f8; padding: 0.5rem; border-radius: 4px; font-size: 0.75rem; overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<div class="panel controls">
+    <h1>SERVO_ARM simulation</h1>
+    <p style="font-size: 0.85rem; color: #667085;">
+        Tweak sliders to check the kinematics before committing to firmware.
+    </p>
+
+    <h2>Runtime parameters</h2>
+    <div class="param">
+        <label>ANGLE (p1)</label>
+        <input type="range" id="p1" min="0" max="1" step="0.001" value="0.5">
+        <span class="val" id="p1-val">0.500</span>
+    </div>
+    <div class="param">
+        <label>OFFSET (p2)</label>
+        <input type="range" id="p2" min="0" max="1" step="0.001" value="0.5">
+        <span class="val" id="p2-val">0.500</span>
+    </div>
+
+    <h2>Mechanical config</h2>
+    <div class="param">
+        <label>d1 (mm)</label>
+        <input type="number" id="d1" value="500" min="50" max="2000" step="10">
+        <span class="val">base→wall</span>
+    </div>
+    <div class="param">
+        <label>d2 (mm)</label>
+        <input type="number" id="d2" value="150" min="20" max="500" step="5">
+        <span class="val">arm length</span>
+    </div>
+    <div class="param">
+        <label>Max angle (°)</label>
+        <input type="number" id="maxang" value="20" min="1" max="80" step="1">
+        <span class="val">±φ on wall</span>
+    </div>
+    <div class="param">
+        <label>Base min (°)</label>
+        <input type="number" id="baseMin" value="0" min="0" max="180" step="1">
+        <span class="val">a1@p2=0</span>
+    </div>
+    <div class="param">
+        <label>Base max (°)</label>
+        <input type="number" id="baseMax" value="180" min="0" max="180" step="1">
+        <span class="val">a1@p2=1</span>
+    </div>
+
+    <div class="readout">
+        <div class="readout-row"><span>a1 (base servo)</span><span id="a1-out">—</span></div>
+        <div class="readout-row"><span>a2 (upper servo)</span><span id="a2-out">—</span></div>
+        <div class="readout-row"><span>φ target angle</span><span id="phi-out">—</span></div>
+        <div class="readout-row"><span>Target x on wall</span><span id="tx-out">—</span></div>
+        <div class="readout-row"><span>Hit x on wall</span><span id="hit-out">—</span></div>
+        <div class="readout-row"><span>Dot error</span><span id="err-out">—</span></div>
+    </div>
+    <div id="status" class="status ok">OK</div>
+
+    <details>
+        <summary>Geometry notes</summary>
+        <pre>a1 = MIN_BASE + p2 · (MAX_BASE − MIN_BASE)
+α  = −a1   (world math angle)
+U  = (d2·cos(a1), −d2·sin(a1))
+φ  = (p1 − 0.5) · 2 · MAX_ANGLE
+T  = (d1·tan(φ), d1)
+βreq = atan2(T.y − U.y, T.x − U.x)
+a2 = βreq + a1 − 90°   (clamped to [0°, 180°])</pre>
+        <p style="color: #667085;">
+            At a1=90° the arm points south (away from wall).
+            At a2=90° the laser points back along the arm (opposite to arm direction).
+            Wall is horizontal at y = d1. Target φ measured from straight-up.
+        </p>
+    </details>
+</div>
+
+<div class="panel">
+    <canvas id="canvas" width="900" height="700"></canvas>
+    <div class="legend">
+        <div><span class="dot" style="background:#98a2b3"></span> wall</div>
+        <div><span class="dot" style="background:#1d2939"></span> base servo · arm · upper servo</div>
+        <div><span class="dot" style="background:#ef4444"></span> laser beam (red dashed)</div>
+        <div><span class="dot" style="background:#10b981"></span> target point on wall (from p1)</div>
+        <div><span class="dot" style="background:#f59e0b"></span> actual laser dot on wall (should coincide with target when a2 is in range)</div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const DEG = Math.PI / 180;
+
+const ctl = {
+    p1: $('p1'), p2: $('p2'),
+    d1: $('d1'), d2: $('d2'),
+    maxang: $('maxang'),
+    baseMin: $('baseMin'), baseMax: $('baseMax'),
+};
+const out = {
+    p1: $('p1-val'), p2: $('p2-val'),
+    a1: $('a1-out'), a2: $('a2-out'),
+    phi: $('phi-out'), tx: $('tx-out'),
+    hit: $('hit-out'), err: $('err-out'),
+    status: $('status'),
+};
+
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+
+// -------- Computation --------
+
+// Returns everything needed for drawing + readouts from current UI.
+function compute() {
+    const p1 = Number(ctl.p1.value);
+    const p2 = Number(ctl.p2.value);
+    const d1 = Number(ctl.d1.value);
+    const d2 = Number(ctl.d2.value);
+    const maxAng = Number(ctl.maxang.value);
+    const baseMin = Number(ctl.baseMin.value);
+    const baseMax = Number(ctl.baseMax.value);
+
+    // Map p2 → a1 (degrees, servo command)
+    const a1 = baseMin + p2 * (baseMax - baseMin);
+
+    // Arm world angle (math convention): α = -a1
+    // So at a1=90, α=-90° (south / away from wall).
+    const alpha = -a1 * DEG;
+
+    // Upper servo position in world (mm).
+    const U = {
+        x: d2 * Math.cos(alpha),
+        y: d2 * Math.sin(alpha),
+    };
+
+    // Map p1 → φ (target angle on wall, degrees, 0 = straight up)
+    const phiDeg = (p1 - 0.5) * 2 * maxAng;
+    const phi = phiDeg * DEG;
+
+    // Target point on wall (wall at y = d1)
+    const T = {
+        x: d1 * Math.tan(phi),
+        y: d1,
+    };
+
+    // Required beam direction from U to T
+    const dx = T.x - U.x;
+    const dy = T.y - U.y;
+    const betaReq = Math.atan2(dy, dx); // radians
+
+    // Required upper servo: a2 = β_req + a1 - 90
+    let a2 = (betaReq / DEG) + a1 - 90;
+
+    // We want a2 in [0, 180]. Compute raw, clamp, and flag.
+    const a2Raw = a2;
+    const a2Clamped = Math.max(0, Math.min(180, a2));
+    const inRange = (a2 >= 0 && a2 <= 180);
+
+    // Actual beam angle given (possibly clamped) a2:
+    const beta = ( -a1 + a2Clamped + 90 ) * DEG;
+
+    // Actual hit on wall:
+    // U + t·(cos β, sin β) intersects y = d1
+    let hit = null;
+    if (Math.abs(Math.sin(beta)) > 1e-6) {
+        const t = (d1 - U.y) / Math.sin(beta);
+        if (t > 0) {
+            hit = {
+                x: U.x + t * Math.cos(beta),
+                y: d1,
+            };
+        }
+    }
+
+    return {
+        p1, p2, d1, d2, maxAng, baseMin, baseMax,
+        a1, alpha, U,
+        phiDeg, phi, T,
+        betaReq, a2Raw, a2: a2Clamped, inRange, beta,
+        hit,
+    };
+}
+
+// -------- Drawing --------
+
+function draw(r) {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Figure out scale so d1 + a bit of margin fits in the canvas.
+    // World: base at origin, wall at y = d1 (up in world).
+    // Canvas: we want base at (W/2, baseY), wall at top (say 60 px from top).
+    const topMargin = 80, bottomMargin = 80;
+    const scale = (H - topMargin - bottomMargin) / r.d1;
+    const baseX = W / 2;
+    const baseY = H - bottomMargin;
+    // Map world (wx, wy) → canvas (cx, cy). +wy world = up on screen.
+    const wx2cx = wx => baseX + wx * scale;
+    const wy2cy = wy => baseY - wy * scale;
+
+    // Wall (horizontal bar across, at world y = d1)
+    const wallCy = wy2cy(r.d1);
+    ctx.fillStyle = '#98a2b3';
+    ctx.fillRect(0, wallCy - 18, W, 18);
+
+    // Reach annotation for ±maxAng
+    const maxPhi = r.maxAng * DEG;
+    const reachLx = r.d1 * Math.tan(-maxPhi);
+    const reachRx = r.d1 * Math.tan(+maxPhi);
+    ctx.strokeStyle = '#cbd5e0';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(baseX, baseY);
+    ctx.lineTo(wx2cx(reachLx), wallCy);
+    ctx.moveTo(baseX, baseY);
+    ctx.lineTo(wx2cx(reachRx), wallCy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Target point on wall
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.arc(wx2cx(r.T.x), wallCy, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Arm: line from base to U
+    ctx.strokeStyle = '#1d2939';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(baseX, baseY);
+    ctx.lineTo(wx2cx(r.U.x), wy2cy(r.U.y));
+    ctx.stroke();
+
+    // Base servo (filled circle at base)
+    ctx.fillStyle = '#344054';
+    ctx.beginPath();
+    ctx.arc(baseX, baseY, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(baseX, baseY, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Upper servo (smaller circle at U)
+    ctx.fillStyle = '#344054';
+    ctx.beginPath();
+    ctx.arc(wx2cx(r.U.x), wy2cy(r.U.y), 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(wx2cx(r.U.x), wy2cy(r.U.y), 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Laser beam (red dashed). Draw from U along β until we hit the wall
+    // or go off canvas.
+    ctx.strokeStyle = r.inRange ? '#ef4444' : '#f97066';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.beginPath();
+    ctx.moveTo(wx2cx(r.U.x), wy2cy(r.U.y));
+    // Extend beam far enough to reach wall or exit canvas.
+    let endX, endY;
+    if (r.hit) {
+        endX = r.hit.x;
+        endY = r.hit.y;
+    } else {
+        // Doesn't hit wall — draw a long stub in the beam direction.
+        const t = r.d1 * 2;
+        endX = r.U.x + t * Math.cos(r.beta);
+        endY = r.U.y + t * Math.sin(r.beta);
+    }
+    ctx.lineTo(wx2cx(endX), wy2cy(endY));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Actual laser dot on wall (amber), if it lands on the wall.
+    if (r.hit) {
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(wx2cx(r.hit.x), wallCy, 6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Small axis labels
+    ctx.fillStyle = '#667085';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.fillText(`d1 = ${r.d1} mm`, 10, wallCy - 24);
+    ctx.fillText(`d2 = ${r.d2} mm (arm)`, 10, H - 20);
+    ctx.fillText(`scale: 1 mm = ${scale.toFixed(2)} px`, W - 170, H - 20);
+
+    // a1 arc indicator at base (showing arm direction)
+    ctx.strokeStyle = '#2970ff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    // From east (0°) going clockwise to α (= -a1°).
+    // In canvas, y is flipped, so the visible arc is from angle 0
+    // (east) going clockwise by a1 degrees.
+    ctx.arc(baseX, baseY, 26, 0, r.a1 * DEG, false);
+    ctx.stroke();
+    ctx.fillStyle = '#2970ff';
+    ctx.fillText(`a1=${r.a1.toFixed(0)}°`, baseX + 30, baseY + 14);
+
+    // a2 arc at upper servo
+    ctx.strokeStyle = '#2970ff';
+    const ucx = wx2cx(r.U.x), ucy = wy2cy(r.U.y);
+    // Arc from "opposite-arm" direction sweeping toward the beam.
+    // Opposite-arm world math angle: α + 180.
+    const oppArm = r.alpha + Math.PI;
+    // In canvas, y flipped. Convert world math angle to canvas angle: canvas_ang = -world_ang.
+    const oppCanvas = -oppArm;
+    const betaCanvas = -r.beta;
+    ctx.beginPath();
+    // Sweep from oppCanvas to betaCanvas, the short way.
+    let from = oppCanvas, to = betaCanvas;
+    // Normalise sweep. Draw as positive-direction arc where we can.
+    ctx.arc(ucx, ucy, 20, from, to, (r.a2 < 90));
+    ctx.stroke();
+    ctx.fillStyle = '#2970ff';
+    ctx.fillText(`a2=${r.a2.toFixed(0)}°`, ucx + 14, ucy - 10);
+}
+
+// -------- Render loop --------
+
+function render() {
+    const r = compute();
+    out.p1.textContent = r.p1.toFixed(3);
+    out.p2.textContent = r.p2.toFixed(3);
+    out.a1.textContent = `${r.a1.toFixed(1)}°`;
+    out.a2.textContent = r.inRange
+        ? `${r.a2.toFixed(1)}°`
+        : `${r.a2.toFixed(1)}° (raw ${r.a2Raw.toFixed(1)}°, clamped)`;
+    out.phi.textContent = `${r.phiDeg.toFixed(2)}°`;
+    out.tx.textContent = `${r.T.x.toFixed(1)} mm`;
+    out.hit.textContent = r.hit ? `${r.hit.x.toFixed(1)} mm` : '(misses wall)';
+    if (r.hit) {
+        const err = r.hit.x - r.T.x;
+        out.err.textContent = `${err.toFixed(2)} mm`;
+    } else {
+        out.err.textContent = '—';
+    }
+    if (!r.inRange) {
+        out.status.className = 'status err';
+        out.status.textContent = `a2 out of servo range (needs ${r.a2Raw.toFixed(1)}°)`;
+    } else if (r.hit && Math.abs(r.hit.x - r.T.x) > 2) {
+        out.status.className = 'status warn';
+        out.status.textContent = 'Dot deviates from target (check geometry)';
+    } else {
+        out.status.className = 'status ok';
+        out.status.textContent = 'OK — laser on target';
+    }
+    draw(r);
+}
+
+for (const el of Object.values(ctl)) {
+    el.addEventListener('input', render);
+}
+render();
+</script>
+</body>
+</html>

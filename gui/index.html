@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AO Electronics GUI</title>
+
+    <!-- Web Awesome (Shoelace successor) — UI components + base theme. -->
+    <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.5.0/styles/webawesome.css">
+    <script type="module" src="https://ka-f.webawesome.com/webawesome@3.5.0/webawesome.loader.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Top connection bar ------------------------------------------------ -->
+<header class="topbar">
+    <div class="topbar-title">AO Electronics</div>
+    <div class="topbar-actions">
+        <wa-button id="stop-all-btn" variant="danger" size="small" disabled>Stop all</wa-button>
+        <wa-button id="identify-all-btn" size="small" appearance="outlined" disabled>All LEDs off</wa-button>
+        <wa-button id="rescan-btn" size="small" appearance="outlined" disabled hidden>Rescan</wa-button>
+        <wa-badge id="conn-status" variant="neutral">disconnected</wa-badge>
+        <wa-button id="connect-btn" variant="brand">Connect</wa-button>
+        <wa-button id="disconnect-btn" appearance="outlined" disabled>Disconnect</wa-button>
+    </div>
+</header>
+
+<!-- Main area: one card per device ----------------------------------- -->
+<main id="devices" class="devices">
+    <div class="empty-hint">
+        No device connected.
+        <br>
+        <small>Connect via USB and click "Connect" to begin. Requires a Chromium-based browser (Chrome, Edge, Arc, Brave) over HTTPS or localhost.</small>
+    </div>
+</main>
+
+<!-- Log panel with command input ------------------------------------- -->
+<aside id="log-panel" class="log-panel">
+    <header>
+        <span>Device log &amp; commands</span>
+        <wa-button id="log-clear-btn" size="small" appearance="plain">Clear</wa-button>
+    </header>
+    <form id="cmd-form" class="cmd-row" autocomplete="off">
+        <span class="cmd-prompt">&gt;</span>
+        <input id="cmd-input" class="cmd-input" type="text" placeholder="Type a command (e.g. list, whoami, demo 1 on) and press Enter" disabled>
+    </form>
+    <div id="log-output" class="log-output"></div>
+</aside>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+/* AO Electronics GUI — layout + light custom styling. */
+
+:root {
+    --page-pad: 1rem;
+    --card-gap: 0.75rem;
+    --subtle-color: #667085;
+    --log-h: 240px;
+    --card-min: 340px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f6f8;
+    color: #1d2939;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+        "topbar"
+        "main"
+        "log";
+}
+
+/* ---- Topbar ---- */
+.topbar {
+    grid-area: topbar;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem var(--page-pad);
+    background: white;
+    border-bottom: 1px solid #e4e7ec;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.topbar-title    { font-weight: 700; font-size: 1.05rem; }
+.topbar-actions  { display: flex; align-items: center; gap: 0.5rem; }
+
+/* ---- Main area: responsive grid of device cards ---- */
+.devices {
+    grid-area: main;
+    padding: var(--page-pad);
+    display: grid;
+    gap: var(--card-gap);
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr));
+    align-items: start;
+    padding-bottom: calc(var(--log-h) + 1rem);
+}
+.empty-hint {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--subtle-color);
+}
+.empty-hint small { font-size: 0.85rem; }
+
+/* ---- Device card ---- */
+.device-card       { display: block; }
+.device-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.device-header-actions {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.subtle {
+    color: var(--subtle-color);
+    font-size: 0.8rem;
+}
+
+/* ---- Section headers (small) ---- */
+.section-header {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--subtle-color);
+    margin: 0.75rem 0 0.4rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ---- Summary params section (visible in both modes) ---- */
+.summary-section { padding: 0.25rem 0 0.5rem 0; }
+.summary-rows    { display: grid; gap: 0.25rem; }
+
+/* ---- Board section ---- */
+.board-section {
+    padding: 0.5rem 0;
+    border-top: 1px solid #f2f4f7;
+}
+.board-section h3 {
+    margin: 0 0 0.4rem 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--subtle-color);
+}
+
+/* ---- Elements section ---- */
+.elements-section {
+    padding: 0.5rem 0;
+    border-top: 1px solid #f2f4f7;
+}
+.elements-list {
+    display: grid;
+    gap: 0.5rem;
+}
+
+/* ---- Element card ---- */
+.element-card  { display: block; }
+.element-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid #f2f4f7;
+    font-size: 0.88rem;
+}
+.element-header-actions {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ---- Params (used in both element card and summary) ---- */
+.element-params  { padding: 0.4rem 0; }
+.param-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 36px;
+    gap: 0.5rem;
+    align-items: center;
+}
+.param-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #344054;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.param-label .idx {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    color: var(--subtle-color);
+    font-size: 0.75rem;
+    margin-right: 0.2em;
+}
+.param-val {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    color: var(--subtle-color);
+    text-align: right;
+}
+
+/* ---- Config block (per-element toggle) ---- */
+.config-block { padding: 0.3rem 0; }
+.element-config { margin-top: 0.35rem; }
+.element-config.hidden { display: none; }
+.config-field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 0.5rem;
+}
+.config-field-grid wa-input { width: 100%; }
+
+/* Native <select> + <label> wrapper used by pin_id fields — visual
+   shape matches wa-input (label above, control below). */
+.config-field-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;     /* so long labels don't push the grid cell wider */
+}
+.config-field-label {
+    font-size: 0.72rem;
+    color: var(--subtle-color);
+    text-transform: capitalize;
+    line-height: 1.2;
+}
+.config-field-select {
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    background: white;
+    color: #1d2939;
+}
+.config-field-wrap.pin-conflict .config-field-select {
+    border-color: #f97066;
+    background: #fef3f2;
+    outline: 2px solid #fecdca;
+    outline-offset: -1px;
+}
+.config-field-wrap.pin-conflict .config-field-label {
+    color: #b42318;
+}
+.config-field-bool-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    background: white;
+}
+.config-field-checkbox {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+.config-field-bool-valuelabel {
+    font-size: 0.78rem;
+    color: var(--subtle-color);
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+}
+
+.config-field-wrap.pin-conflict::after {
+    content: "pin used by another element";
+    font-size: 0.7rem;
+    color: #b42318;
+    margin-top: 0.1rem;
+}
+
+.error-text { color: #b42318; }
+
+/* ---- Simple native <dialog> — used for Add Element etc. ---- */
+.simple-dialog {
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    padding: 1.25rem 1.25rem 1rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    background: white;
+    min-width: 320px;
+    max-width: 90vw;
+    font-family: inherit;
+    color: inherit;
+}
+.simple-dialog::backdrop {
+    background: rgba(29, 41, 57, 0.5);
+}
+.simple-dialog h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+.simple-dialog-row {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.simple-dialog-row label {
+    font-size: 0.9rem;
+    color: var(--subtle-color);
+}
+.simple-dialog-row select {
+    padding: 0.4rem 0.5rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: white;
+    font-family: inherit;
+}
+.simple-dialog-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+.simple-dialog-actions button {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    background: white;
+    color: #1d2939;          /* explicit — Web Awesome's CSS resets
+                                plain <button> color and ours would
+                                otherwise inherit something invisible */
+    cursor: pointer;
+    font-family: inherit;
+}
+.simple-dialog-actions button[type="submit"] {
+    background: #2970ff;
+    color: white;
+    border-color: #2970ff;
+}
+.simple-dialog-actions button:hover {
+    filter: brightness(0.97);
+}
+
+/* ---- Peripheral-level compact mode ---- */
+/* Expanded (default): summary hidden — element cards have their own sliders.
+   Compact (.compact): only header + summary sliders shown. */
+.device-card:not(.compact) .summary-section {
+    display: none;
+}
+.device-card.compact .board-section,
+.device-card.compact .elements-section {
+    display: none;
+}
+
+/* ---- Log panel ---- */
+.log-panel {
+    grid-area: log;
+    background: #1d2939;
+    color: #e4e7ec;
+    padding: 0.5rem var(--page-pad);
+    height: var(--log-h);
+    max-height: var(--log-h);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top: 1px solid #344054;
+}
+.log-panel header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #98a2b3;
+}
+.cmd-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #0e1826;
+    border: 1px solid #344054;
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+}
+.cmd-prompt {
+    color: #667085;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+}
+.cmd-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e4e7ec;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    padding: 0.25rem 0;
+}
+.cmd-input:disabled       { color: #475467; }
+.cmd-input::placeholder   { color: #475467; }
+
+.log-output {
+    flex: 1;
+    overflow-y: auto;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+.log-line { white-space: pre-wrap; }
+.log-line.log-error    { color: #fda29b; }
+.log-line.log-warn     { color: #fec84b; }
+.log-line.log-ok       { color: #a6f4c5; }
+.log-line.log-sent     { color: #7dd3fc; }
+.log-line.log-cmd      { color: #c7d2fe; }
+.log-line.log-response { color: #e4e7ec; }

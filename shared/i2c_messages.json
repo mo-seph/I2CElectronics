@@ -1,0 +1,107 @@
+{
+    "encoding": {
+        "parameter_type": "uint16_t",
+        "parameter_bytes": 2,
+        "parameter_byte_order": "little_endian",
+        "parameter_range_description": "uint16 range [0, 65535] maps semantically to the normalized float range [0.0, 1.0]. Elements interpret this range using their own config (MIN/MAX/REST etc)."
+    },
+    "requests": {
+        "0x30": {
+            "id_string": "GET_CONFIG",
+            "description": "Request the current configuration of the device (bare list of Element type_ids, in index order)",
+            "data": []
+        },
+        "0x31": {
+            "id_string": "SET_PARAMETERS",
+            "description": "Set parameters for a single Element",
+            "data": [
+                {
+                    "id": "ELEMENT_INDEX",
+                    "bytes": "1",
+                    "description": "The per-board index of the Element to set parameters for (matches `index` in example_elements.json)"
+                },
+                {
+                    "id": "PARAMETERS_LENGTH",
+                    "bytes": "1",
+                    "description": "The length of PARAMETERS_DATA in bytes (must equal 2 * parameter_count for the target Element)"
+                },
+                {
+                    "id": "PARAMETERS_DATA",
+                    "bytes": "PARAMETERS_LENGTH",
+                    "description": "A sequence of uint16 values, little-endian, one per parameter of the target Element, in the order declared in control_schema.json"
+                }
+            ]
+        },
+        "0x32": {
+            "id_string": "STOP",
+            "description": "Stop all Elements",
+            "data": []
+        },
+        "0x33": {
+            "id_string": "SET_PARAMETER",
+            "description": "Set a single parameter on a single Element. Used by GUI sliders for low-latency updates.",
+            "data": [
+                { "id": "ELEMENT_INDEX",  "bytes": "1", "description": "Per-board index (matches config.json)" },
+                { "id": "PARAMETER_ID",   "bytes": "1", "description": "Zero-based parameter index (matches control_schema.json order)" },
+                { "id": "VALUE",          "bytes": "2", "description": "uint16 little-endian, [0,65535] semantically [0.0,1.0]" }
+            ]
+        },
+        "0x34": {
+            "id_string": "DEMO",
+            "description": "Turn demo mode on or off for one Element or all Elements on this peripheral.",
+            "data": [
+                { "id": "ELEMENT_INDEX",  "bytes": "1", "description": "Per-board index, or 0xFF to target every Element on this peripheral" },
+                { "id": "ACTION",         "bytes": "1", "description": "0 = demo off, non-zero = demo on" }
+            ]
+        },
+        "0x40": {
+            "id_string": "TEXT_WRITE",
+            "description": "Text tunnel — write one chunk of the request text. The Central accumulates a text command (identical to what the Peripheral's USB Serial CLI accepts) across as many chunks as needed. The Peripheral assembles chunks into its request buffer and, when the last chunk arrives (MORE=0), runs the line through its own text dispatcher, capturing output into a response buffer that the Central then reads via TEXT_READ.",
+            "data": [
+                { "id": "OFFSET", "bytes": "2", "description": "Byte offset in the request buffer to write this chunk at, uint16 little-endian. First chunk is offset 0." },
+                { "id": "LENGTH", "bytes": "1", "description": "Number of payload bytes in this chunk (<= TEXT_CHUNK_MAX)." },
+                { "id": "MORE",   "bytes": "1", "description": "0 = last chunk (trigger processing), non-zero = more chunks follow." },
+                { "id": "DATA",   "bytes": "LENGTH", "description": "UTF-8 bytes of the text command. Newlines not required — the Peripheral treats the assembled buffer as one line." }
+            ]
+        },
+        "0x41": {
+            "id_string": "TEXT_READ",
+            "description": "Text tunnel — read one chunk of the response text. The Central polls with increasing OFFSET until the returned STATUS != TEXT_STATUS_IN_PROGRESS, i.e. the Peripheral has finished processing and has sent the terminator line (OK or ERR).",
+            "data": [
+                { "id": "OFFSET", "bytes": "2", "description": "Byte offset in the response buffer to read from, uint16 little-endian." },
+                { "id": "MAXLEN", "bytes": "1", "description": "Caller-requested max payload size for this chunk (<= TEXT_CHUNK_MAX). Response may return fewer bytes." }
+            ]
+        }
+    },
+    "responses": {
+        "0x30": {
+            "id_string": "GET_CONFIG_RESPONSE",
+            "description": "Response to a GET_CONFIG request: bare summary of the loaded Elements",
+            "data": [
+                {
+                    "id": "CONFIG_LENGTH",
+                    "bytes": "1",
+                    "description": "The number of Elements loaded on this Peripheral"
+                },
+                {
+                    "id": "CONFIG_DATA",
+                    "bytes": "CONFIG_LENGTH",
+                    "description": "One byte per Element: the type_id (from control_schema.json). Element order matches per-board index."
+                }
+            ]
+        },
+        "0x41": {
+            "id_string": "TEXT_READ_RESPONSE",
+            "description": "Response to a TEXT_READ request — one chunk of the response text plus framing metadata.",
+            "data": [
+                { "id": "LENGTH", "bytes": "1", "description": "Number of payload bytes in this chunk." },
+                { "id": "MORE",   "bytes": "1", "description": "0 = this is the final chunk at this offset, non-zero = more bytes available past OFFSET+LENGTH." },
+                { "id": "STATUS", "bytes": "1", "description": "0 = TEXT_STATUS_IN_PROGRESS (response still being generated), 1 = TEXT_STATUS_OK (command finished, terminator was OK), 2 = TEXT_STATUS_ERR (command finished, terminator was ERR)." },
+                { "id": "DATA",   "bytes": "LENGTH", "description": "UTF-8 bytes of the response. Newlines preserved from the command's output." }
+            ]
+        }
+    },
+    "errors": {
+        "policy": "Malformed messages, unknown ELEMENT_INDEX, or PARAMETERS_LENGTH mismatches are silently dropped on the I2C bus. Each such event is logged as a human-readable line on the Peripheral's USB Serial output for diagnostics. No error-response messages are emitted on I2C in v1."
+    }
+}

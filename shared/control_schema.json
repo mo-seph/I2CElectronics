@@ -1,0 +1,178 @@
+[
+    {
+        "type_id": 1,
+        "type_name": "PWM_MOTOR",
+        "description": "A PWM motor that can be controlled by a PWM signal",
+        "config": [
+            {
+                "id": "PWM_PIN",
+                "type": "pin_id",
+                "description": "The pin number to control the motor"
+            },
+            {
+                "id": "PWM_FREQ",
+                "type": "integer",
+                "description": "PWM frequency in Hz. Most H-bridge motor drivers want 15000-25000 (above audible, within driver spec). Default 20000.",
+                "default": 20000
+            },
+            {
+                "id": "RAMP_TIME",
+                "type": "milliseconds",
+                "description": "Ramp time for speed changes",
+                "default": 100,
+                "minimum": 0,
+                "maximum": 10000
+            },
+            {
+                "id": "MAX_SPEED",
+                "type": "integer",
+                "description": "Maximum PWM duty (0-255) corresponding to SPEED=1.0",
+                "default": 255
+            },
+            {
+                "id": "MIN_SPEED",
+                "type": "integer",
+                "description": "Minimum PWM duty (0-255) corresponding to SPEED=0.0",
+                "default": 0
+            },
+            {
+                "id": "INVERT",
+                "type": "boolean",
+                "description": "Invert pin polarity at the output. Off = motor at full when pin pulled high (active-high driver). On = motor at full when pin pulled low (active-low driver, e.g. high-side P-channel MOSFET).",
+                "default": false
+            }
+        ],
+        "parameters": [
+            "SPEED"
+        ]
+    },
+    {
+        "type_id": 2,
+        "type_name": "SERVO_MOTOR",
+        "description": "A servo motor controlled by a PWM signal, interpreted as a position",
+        "config": [
+            {
+                "id": "SERVO_PIN",
+                "type": "pin_id",
+                "description": "The pin number to control the servo"
+            },
+            {
+                "id": "MIN_POSITION",
+                "type": "integer",
+                "description": "Servo angle (degrees) corresponding to POSITION=0.0",
+                "default": 0
+            },
+            {
+                "id": "MAX_POSITION",
+                "type": "integer",
+                "description": "Servo angle (degrees) corresponding to POSITION=1.0",
+                "default": 180
+            }
+        ],
+        "parameters": [
+            "POSITION"
+        ]
+    },
+    {
+        "type_id": 3,
+        "type_name": "SERVO_ARM",
+        "description": "Two-servo arm aiming a laser/LED dot at a wall. ANGLE (p1) controls the dot's position on the wall as an angle from straight-out from the base. OFFSET (p2) controls the base servo angle — i.e. where the arm is pointing. At OFFSET=middle the arm points directly away from the wall; the upper servo is computed to keep the dot on target as OFFSET sweeps, so the beam takes different paths through space but the dot stays put. See gui/servo_arm_sim.html for the kinematics.",
+        "config": [
+            {
+                "id": "BASE_SERVO_PIN",
+                "type": "pin_id",
+                "description": "GPIO for the base servo"
+            },
+            {
+                "id": "UPPER_SERVO_PIN",
+                "type": "pin_id",
+                "description": "GPIO for the upper servo (mounted on the arm tip)"
+            },
+            {
+                "id": "MIN_BASE_POSITION",
+                "type": "integer",
+                "description": "Base servo angle (°) at OFFSET=0.0 — one arm-swing extreme",
+                "default": 0
+            },
+            {
+                "id": "MAX_BASE_POSITION",
+                "type": "integer",
+                "description": "Base servo angle (°) at OFFSET=1.0 — other arm-swing extreme",
+                "default": 180
+            },
+            {
+                "id": "MIN_UPPER_POSITION",
+                "type": "integer",
+                "description": "Lowest safe mechanical angle (°) for the upper servo — the firmware clamps here if the computed angle goes below",
+                "default": 0
+            },
+            {
+                "id": "MAX_UPPER_POSITION",
+                "type": "integer",
+                "description": "Highest safe mechanical angle (°) for the upper servo — the firmware clamps here if the computed angle goes above",
+                "default": 180
+            },
+            {
+                "id": "FOCUS_DISTANCE_MM",
+                "type": "integer",
+                "description": "Distance from the base pivot to the wall (mm)",
+                "default": 500
+            },
+            {
+                "id": "ARM_LENGTH_MM",
+                "type": "integer",
+                "description": "Arm length from base pivot to upper servo (mm)",
+                "default": 150
+            },
+            {
+                "id": "MIN_BEAM_ANGLE_DEG",
+                "type": "integer",
+                "description": "Beam angle (°) at ANGLE=0.0 — 0 is straight out from base, negative sweeps to one side of the wall",
+                "default": -20
+            },
+            {
+                "id": "MAX_BEAM_ANGLE_DEG",
+                "type": "integer",
+                "description": "Beam angle (°) at ANGLE=1.0 — 0 is straight out from base, positive sweeps to the other side",
+                "default": 20
+            }
+        ],
+        "parameters": [
+            "ANGLE",
+            "OFFSET"
+        ]
+    },
+    {
+        "type_id": 4,
+        "type_name": "CONTINUOUS_SERVO",
+        "description": "A continuous-rotation servo. SPEED 0.0 = full reverse (MIN_SPEED), SPEED 0.5 = rest (REST_SPEED), SPEED 1.0 = full forward (MAX_SPEED).",
+        "config": [
+            {
+                "id": "SERVO_PIN",
+                "type": "pin_id",
+                "description": "The pin number to control the servo"
+            },
+            {
+                "id": "MIN_SPEED",
+                "type": "integer",
+                "description": "Servo value for full reverse, SPEED=0.0",
+                "default": 0
+            },
+            {
+                "id": "MAX_SPEED",
+                "type": "integer",
+                "description": "Servo value for full forward, SPEED=1.0",
+                "default": 180
+            },
+            {
+                "id": "REST_SPEED",
+                "type": "integer",
+                "description": "Servo value at rest, SPEED=0.5",
+                "default": 90
+            }
+        ],
+        "parameters": [
+            "SPEED"
+        ]
+    }
+]

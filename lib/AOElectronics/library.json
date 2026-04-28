@@ -1,0 +1,12 @@
+{
+    "name": "AOElectronics",
+    "version": "0.1.0",
+    "description": "Shared library for the Artificial Otoacoustics I2CElectronics subproject: Element base class, Element implementations, config loader, and protocol constants. Used by both the Peripheral and Central PlatformIO environments.",
+    "keywords": ["artificial-otoacoustics", "i2c", "elements"],
+    "frameworks": "arduino",
+    "platforms": "espressif32",
+    "dependencies": [
+        { "name": "ArduinoJson", "version": "^7.0.4" },
+        { "name": "Adafruit NeoPixel", "version": "^1.12.0" }
+    ]
+}
