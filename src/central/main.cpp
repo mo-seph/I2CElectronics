@@ -25,6 +25,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include "ConfigLoader.h"
 #include "Protocol.h"
 #include "StatusLed.h"
 
@@ -40,14 +41,13 @@ static const uint32_t LOOP_DELAY_MS = 5;
 static const uint32_t I2C_FREQ_HZ = 100000;
 
 // I2C pins. Override with -DI2C_SDA_PIN_GPIO=<n> / -DI2C_SCL_PIN_GPIO=<n>
-// in platformio.ini build_flags.  Defaults match the Waveshare ESP32-S3-Zero
-// header (GPIO 8 = SDA, GPIO 9 = SCL); change the build flags if those pins
-// are in use for other purposes or show signs of damage.
+// in platformio.ini build_flags.  Defaults match the XIAO ESP32-S3
+// silkscreen-labelled SDA/SCL pads (D4 = GPIO 5, D5 = GPIO 6).
 #ifndef I2C_SDA_PIN_GPIO
-#  define I2C_SDA_PIN_GPIO 8
+#  define I2C_SDA_PIN_GPIO 5
 #endif
 #ifndef I2C_SCL_PIN_GPIO
-#  define I2C_SCL_PIN_GPIO 9
+#  define I2C_SCL_PIN_GPIO 6
 #endif
 static const int I2C_SDA_PIN = I2C_SDA_PIN_GPIO;
 static const int I2C_SCL_PIN = I2C_SCL_PIN_GPIO;
@@ -212,10 +212,14 @@ static void doScan() {
     bool presentThisScan[MAX_PERIPHERALS];
     for (uint8_t i = 0; i < MAX_PERIPHERALS; i++) presentThisScan[i] = false;
 
-    // Track freshly-added addresses so we can fetchConfig AFTER the sweep
-    // completes — keeps per-address probe timing predictable.
-    uint8_t newlyAdded[MAX_PERIPHERALS];
-    uint8_t newlyAddedCount = 0;
+    // Track addresses that need a fetchConfig pass after the sweep —
+    // keeps per-address probe timing predictable. A slot lands here in
+    // two cases:
+    //   1. genuinely new — alloc'd this scan
+    //   2. existing but configFetched=false — earlier fetch failed
+    //      (e.g. peripheral hadn't finished booting), retry now.
+    uint8_t needsFetch[MAX_PERIPHERALS];
+    uint8_t needsFetchCount = 0;
 
     uint8_t foundAddrs[MAX_PERIPHERALS];
     uint8_t foundCount = 0;
@@ -232,12 +236,17 @@ static void doScan() {
                 Serial.printf("# [scan] roster full, ignoring %u\n", addr);
                 continue;
             }
-            if (newlyAddedCount < MAX_PERIPHERALS) {
-                newlyAdded[newlyAddedCount++] = (uint8_t)slot;
+            if (needsFetchCount < MAX_PERIPHERALS) {
+                needsFetch[needsFetchCount++] = (uint8_t)slot;
             }
         } else {
             roster[slot].lastSeenMs    = now;
             roster[slot].lastMissCount = 0;
+            // Retry config fetch if we never got a clean one.
+            if (!roster[slot].configFetched &&
+                needsFetchCount < MAX_PERIPHERALS) {
+                needsFetch[needsFetchCount++] = (uint8_t)slot;
+            }
         }
         presentThisScan[slot] = true;
     }
@@ -254,9 +263,9 @@ static void doScan() {
         }
     }
 
-    // Fetch config for genuinely new peripherals now that the sweep is done.
-    for (uint8_t i = 0; i < newlyAddedCount; i++) {
-        fetchConfig(roster[newlyAdded[i]]);
+    // Fetch config for new peripherals + retry-needed entries.
+    for (uint8_t i = 0; i < needsFetchCount; i++) {
+        fetchConfig(roster[needsFetch[i]]);
     }
 
     // Summary line.
@@ -807,12 +816,26 @@ void setup() {
         roster[i].address = 0;
     }
 
-    // Status LED up first — white while booting, flipped to cyan once
-    // setup completes at the end of this function.
-    StatusLed::begin();
+    Serial.begin(115200);
+
+    // Bring StatusLed up BEFORE the host-wait so the LED indicates
+    // liveness within ~half a second of power-on, not 2+ s.  LittleFS
+    // prints are silent here — fine because the host hasn't connected
+    // yet.
+    BoardConfig board;
+    bool fsOk = ConfigLoader::mount();
+    if (fsOk) ConfigLoader::loadBoardConfig(board);
+
+    // Short settle delay before the first WS2812 frame.  Without it,
+    // early-boot show() calls can land while USB CDC is still
+    // enumerating / RMT setup is racing and produce corrupted byte
+    // timing — non-deterministic colours.  See peripheral main.cpp for
+    // the same comment.
+    delay(200);
+
+    StatusLed::begin(board.statusLed);
     StatusLed::setSolid(255, 255, 255);
 
-    Serial.begin(115200);
     delay(2000); // unconditional pause — gives the host time to open the
                  // monitor before boot messages are printed.
 
@@ -821,8 +844,11 @@ void setup() {
     Serial.println(F("# === AO ELECTRONICS CENTRAL ==="));
     Serial.println(F("# =========================="));
     Serial.printf("# fw=%s\n", FW_VERSION);
+    if (!fsOk) {
+        Serial.println(F("# LittleFS unavailable; status LED disabled"));
+    }
 
-    // I2C master — pins from build flags (default GPIO 8/9).
+    // I2C master — pins from build flags (default GPIO 5/6 = XIAO D4/D5).
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
     Wire.setClock(I2C_FREQ_HZ);
     Serial.printf("# i2c master @ %u Hz (SDA=GPIO%d, SCL=GPIO%d)\n",

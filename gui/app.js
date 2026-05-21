@@ -13,7 +13,7 @@
 
 import { SerialConnection } from './serial.js';
 import { Protocol } from './protocol.js';
-import { buildControl, getBoardPins } from './ui-schema.js';
+import { buildControl } from './ui-schema.js';
 
 // ---------- State ----------
 const state = {
@@ -786,9 +786,10 @@ function buildElementCard(entry, dev, { configVisible = false } = {}) {
 
         const fieldGrid = document.createElement('div');
         fieldGrid.className = 'config-field-grid';
+        const ctx = { boardPins: dev.boardData?.pins };
         for (const cfgEntry of typeEntry.config) {
             const initial = entry.config?.[cfgEntry.id];
-            const input = buildControl(cfgEntry, initial);
+            const input = buildControl(cfgEntry, initial, ctx);
             input.classList.add('compact');
             fieldGrid.appendChild(input);
             rec.fieldInputs.push({ cfgEntry, input });
@@ -815,11 +816,24 @@ function buildElementCard(entry, dev, { configVisible = false } = {}) {
 // Walk all pin_id fields across all Elements on `dev`, flag any GPIO
 // number that's used by more than one field. Re-run whenever a pin
 // select changes, on add, on remove.
+//
+// Marks at two levels:
+//   - the offending `.config-field-wrap.pin-conflict` (red border + "pin
+//     used by another element" tooltip), visible when the config block
+//     is expanded.
+//   - the enclosing `.element-card.has-pin-conflict`, so the conflict
+//     stays visible (red ribbon on the card header) even when the
+//     config block is collapsed.
 function checkPinConflicts(dev) {
+    // Collect pin wraps and the element-card each wrap lives in, in lockstep.
     const pinWraps = [];
+    const cardOf   = []; // card containing pinWraps[i]
     for (const rec of dev.liveElements) {
         for (const f of rec.fieldInputs) {
-            if (f.input?.isPinField) pinWraps.push(f.input);
+            if (f.input?.isPinField) {
+                pinWraps.push(f.input);
+                cardOf.push(rec.cardEl);
+            }
         }
     }
     const countByPin = new Map();
@@ -827,8 +841,13 @@ function checkPinConflicts(dev) {
         const pin = w.getValue();
         countByPin.set(pin, (countByPin.get(pin) || 0) + 1);
     }
-    for (const w of pinWraps) {
-        w.classList.toggle('pin-conflict', countByPin.get(w.getValue()) > 1);
+    // Clear card-level flags first; we'll re-set below.
+    for (const rec of dev.liveElements) rec.cardEl?.classList.remove('has-pin-conflict');
+    for (let i = 0; i < pinWraps.length; i++) {
+        const w = pinWraps[i];
+        const conflict = countByPin.get(w.getValue()) > 1;
+        w.classList.toggle('pin-conflict', conflict);
+        if (conflict) cardOf[i]?.classList.add('has-pin-conflict');
     }
 }
 

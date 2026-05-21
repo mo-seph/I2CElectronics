@@ -12,31 +12,31 @@
   {
     "index": 3,
     "type": "PWM_MOTOR",
-    "config": { "PWM_PIN": 4, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
+    "config": { "PWM_PIN": 3, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
   },
   {
     "index": 4,
     "type": "PWM_MOTOR",
-    "config": { "PWM_PIN": 5, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
+    "config": { "PWM_PIN": 4, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
   },
   {
     "index": 5,
     "type": "PWM_MOTOR",
-    "config": { "PWM_PIN": 6, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
+    "config": { "PWM_PIN": 43, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
   },
   {
     "index": 6,
     "type": "PWM_MOTOR",
-    "config": { "PWM_PIN": 7, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
+    "config": { "PWM_PIN": 44, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
   },
   {
     "index": 7,
     "type": "PWM_MOTOR",
-    "config": { "PWM_PIN": 10, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
+    "config": { "PWM_PIN": 7, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
   },
   {
     "index": 8,
     "type": "PWM_MOTOR",
-    "config": { "PWM_PIN": 18, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
+    "config": { "PWM_PIN": 8, "PWM_FREQ": 20000, "RAMP_TIME": 100, "MAX_SPEED": 255, "MIN_SPEED": 0, "INVERT": false }
   }
 ]

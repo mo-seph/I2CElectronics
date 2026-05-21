@@ -1,0 +1,6 @@
+{
+    "status_led": {
+        "pin": 9,
+        "color_order": "GRB"
+    }
+}

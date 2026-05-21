@@ -143,6 +143,53 @@
         ]
     },
     {
+        "type_id": 5,
+        "type_name": "BLDC_MOTOR",
+        "description": "A brushless motor driven through a BLHeli (or other PWM/PPM-compatible) ESC. The ESC sees standard hobby-servo style pulses, 1000 µs = zero throttle, 2000 µs = full. At init the ESC sees a sustained MIN_PULSE_US for ARM_DURATION_MS before any throttle is accepted. SAFETY: spinning brushless motors with no propeller/wheel attached can hit dangerous speeds at modest throttle — set MAX_PULSE_US to 1100-1300 µs while bench testing.",
+        "config": [
+            {
+                "id": "ESC_PIN",
+                "type": "pin_id",
+                "description": "The GPIO driving the ESC signal wire"
+            },
+            {
+                "id": "MIN_PULSE_US",
+                "type": "integer",
+                "description": "Pulse width (µs) corresponding to THROTTLE=0.0 (zero throttle / arm position). Standard ESCs: 1000 µs.",
+                "default": 1000
+            },
+            {
+                "id": "MAX_PULSE_US",
+                "type": "integer",
+                "description": "Pulse width (µs) corresponding to THROTTLE=1.0 (full throttle). Standard ESCs: 2000 µs. Lower this (e.g. to 1200) as a safety cap while testing.",
+                "default": 2000
+            },
+            {
+                "id": "UPDATE_FREQ_HZ",
+                "type": "integer",
+                "description": "PWM update frequency in Hz. 50 is the universal default; BLHeli_S typically accepts up to ~500.",
+                "default": 50
+            },
+            {
+                "id": "ARM_DURATION_MS",
+                "type": "milliseconds",
+                "description": "How long the ESC must see MIN_PULSE_US at startup before it accepts throttle. 2 s is conservative; some ESCs arm in well under 1 s.",
+                "default": 2000
+            },
+            {
+                "id": "RAMP_TIME",
+                "type": "milliseconds",
+                "description": "Software ramp time for throttle changes (0..1 in this many ms). Independent of the ESC's own ramping.",
+                "default": 200,
+                "minimum": 0,
+                "maximum": 10000
+            }
+        ],
+        "parameters": [
+            "THROTTLE"
+        ]
+    },
+    {
         "type_id": 4,
         "type_name": "CONTINUOUS_SERVO",
         "description": "A continuous-rotation servo. SPEED 0.0 = full reverse (MIN_SPEED), SPEED 0.5 = rest (REST_SPEED), SPEED 1.0 = full forward (MAX_SPEED).",

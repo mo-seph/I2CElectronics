@@ -621,17 +621,17 @@ static void onI2CRequest() {
     pendingResponseType = 0;
 }
 
-// I2C slave pins. GPIO 8 (SDA) / GPIO 9 (SCL) are the ESP32-S3 variant
-// defaults and the only pins confirmed to work for Wire slave on this board.
-// Override with -DI2C_SDA_PIN_GPIO=<n> / -DI2C_SCL_PIN_GPIO=<n> in
-// platformio.ini.  Wire.setPins() is used (not Wire.begin(addr, sda, scl))
-// to avoid the IDF GPIO-state conflict that hangs the slave driver.
-// Central uses the same GPIO 8/9 — consistent wiring across all boards.
+// I2C slave pins. Default to the XIAO ESP32-S3 silkscreen-labelled SDA/SCL
+// pins (D4 = GPIO 5, D5 = GPIO 6). Override with -DI2C_SDA_PIN_GPIO=<n> /
+// -DI2C_SCL_PIN_GPIO=<n> in platformio.ini. Wire.setPins() is used (not
+// Wire.begin(addr, sda, scl)) to avoid the IDF GPIO-state conflict that
+// hangs the slave driver on arduino-esp32 v2.x. Central uses the same
+// GPIOs — consistent wiring across all boards.
 #ifndef I2C_SDA_PIN_GPIO
-#  define I2C_SDA_PIN_GPIO 8
+#  define I2C_SDA_PIN_GPIO 5
 #endif
 #ifndef I2C_SCL_PIN_GPIO
-#  define I2C_SCL_PIN_GPIO 9
+#  define I2C_SCL_PIN_GPIO 6
 #endif
 static const int I2C_SDA_PIN = I2C_SDA_PIN_GPIO;
 static const int I2C_SCL_PIN = I2C_SCL_PIN_GPIO;
@@ -740,26 +740,40 @@ void setup() {
     Serial.setRxBufferSize(CLI_BUF_SIZE);
     Serial.begin(115200);
 
-    // Wait up to 3 s for the USB-CDC port to be opened by the host.
+    // Bring StatusLed up BEFORE the USB-CDC wait so the LED indicates
+    // liveness within ~half a second of power-on, not 3+ s.
+    //
+    // LittleFS mount + board.json parse here is silent on Serial (any
+    // diagnostic prints before the host opens the port are buffered or
+    // dropped; not worth re-routing for early-boot logs).
+    bool fsOk = ConfigLoader::mount();
+    if (fsOk) ConfigLoader::loadBoardConfig(board);
+
+    // Then a short settle delay before driving the WS2812.  Without it,
+    // the very first show() can land mid-USB-CDC-enumeration and come
+    // out with corrupted byte timing — visible as non-deterministic
+    // colours (white commanded → faint yellow on one boot, bright
+    // orange on the next).  ~200 ms is empirically enough for the chip
+    // / USB / RMT-or-bit-bang path to be stable.
+    delay(200);
+
+    StatusLed::begin(board.statusLed);
+    StatusLed::setSolid(255, 255, 255); // white during the rest of boot
+
+    // Wait up to 3 s for the USB-CDC port to be opened by the host so
+    // the boot diagnostics below are visible.
     uint32_t t0 = millis();
     while (!Serial && (millis() - t0) < 3000) delay(10);
     delay(200);
-
-    // Status LED up. White during boot (so a long boot or a hang is
-    // visually distinct from a successful green); flipped to role green
-    // at the end of setup() once everything is initialised.
-    StatusLed::begin();
-    StatusLed::setSolid(255, 255, 255);
 
     Serial.println();
     Serial.println(F("# =============================="));
     Serial.println(F("# === AO ELECTRONICS PERIPHERAL ==="));
     Serial.println(F("# =============================="));
 
-    if (!ConfigLoader::mount()) {
+    if (!fsOk) {
         Serial.println(F("# LittleFS unavailable; running with no Elements"));
     } else {
-        ConfigLoader::loadBoardConfig(board);
         Serial.printf("# i2c_address = 0x%02X\n", board.i2cAddress);
         ConfigLoader::loadElements(elements, MAX_ELEMENTS_PER_BOARD, elementCount);
         initialiseElements();

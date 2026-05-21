@@ -7,32 +7,39 @@
 // -----------------------------------------------------------------------
 // Board pin map
 //
-// All GPIOs 1-18 are offered in the pin_id dropdown. Pins with a known
-// concern (strapping role, firmware I2C, etc.) show the reason in
-// parentheses so the user picks knowingly — but they're still selectable.
-// If a loaded config contains a pin outside this range it's prepended as
-// a "non-standard" option so the config can be viewed and reassigned.
+// The authoritative `available` / `concerns` lists live in each board's
+// own `board.json`, so different breakouts (custom PCB vs bare-S3-on-
+// breadboard vs all-pins-for-testing) can describe their usable GPIOs
+// independently.  The GUI reads `boardData.pins` from the device and
+// passes it through to `pinIdSelect` via the `ctx` argument of
+// `buildControl(entry, initial, ctx)`.
+//
+// The fallback below is used only when `board.json` has no `pins` block
+// — typical for an out-of-date board.json on a freshly-flashed device,
+// or for a Central-mode peripheral whose board.json hasn't been fetched
+// yet.  Keep it permissive so the dropdown always offers something
+// reasonable; the user can refine the config once they update board.json.
 // -----------------------------------------------------------------------
 
-const BOARD_PINS = {
-    range: [0, 23],
-    // Per-GPIO concerns shown as parenthetical notes in the dropdown.
-    // All pins are still selectable — these are informational only.
-    //   GPIO 0  — strapping pin (boot mode; must be HIGH at power-on)
-    //   GPIO 3  — strapping pin
-    //   GPIO 8/9 — firmware I2C SDA/SCL (Waveshare S3-Zero wiring)
-    //   GPIO 19/20 — USB D-/D+ on S3-Zero (avoid on that board)
-    //   GPIO 21 — onboard WS2812 LED on Waveshare S3-Zero
-    concerns: {
-        0:  'strapping / boot mode',
-        3:  'strapping',
-        8:  'I2C SDA',
-        9:  'I2C SCL',
-        19: 'USB D−',
-        20: 'USB D+',
-        21: 'onboard LED',
-    },
+const FALLBACK_BOARD_PINS = {
+    available: [1, 2, 3, 4, 7, 8, 43, 44],
+    concerns: { 3: 'strapping (JTAG sel)' },
 };
+
+// Coerce concerns keys to numbers (board.json delivers them as strings
+// since JSON has no numeric keys). Returns a fresh object; safe to call
+// each render.
+function normaliseBoardPins(raw) {
+    if (!raw || !Array.isArray(raw.available)) return FALLBACK_BOARD_PINS;
+    const concerns = {};
+    if (raw.concerns && typeof raw.concerns === 'object') {
+        for (const [k, v] of Object.entries(raw.concerns)) {
+            const n = Number(k);
+            if (Number.isFinite(n) && typeof v === 'string') concerns[n] = v;
+        }
+    }
+    return { available: raw.available.slice(), concerns };
+}
 
 const MAX_GPIO = 48; // ESP32-S3 max; used as a permissive bound on the
                      // generic integer / milliseconds inputs.
@@ -68,7 +75,8 @@ function numberInput(entry, initial, { min, max, step = 1, suffix } = {}) {
 // a pin outside the range it's prepended as a "non-standard" option so
 // the config can be viewed and reassigned without data loss.
 
-function pinIdSelect(entry, initial) {
+function pinIdSelect(entry, initial, ctx) {
+    const boardPins = normaliseBoardPins(ctx?.boardPins);
     const wrap = document.createElement('div');
     wrap.className = 'config-field-wrap';
 
@@ -81,26 +89,26 @@ function pinIdSelect(entry, initial) {
     const select = document.createElement('select');
     select.className = 'config-field-select pin-id-select';
 
-    const [lo, hi] = BOARD_PINS.range;
-    for (let pin = lo; pin <= hi; pin++) {
+    const available = boardPins.available;
+    for (const pin of available) {
         const opt = document.createElement('option');
         opt.value = String(pin);
-        const concern = BOARD_PINS.concerns[pin];
+        const concern = boardPins.concerns[pin];
         opt.textContent = concern ? `GPIO ${pin}  (${concern})` : `GPIO ${pin}`;
         select.appendChild(opt);
     }
 
-    // Prepend an annotated option for any value outside the board range
+    // Prepend an annotated option for any value not in the available list
     // so a legacy or cross-board config isn't silently mangled.
     const initN = Number(initial);
-    const inRange = Number.isFinite(initN) && initN >= lo && initN <= hi;
-    if (Number.isFinite(initN) && !inRange) {
+    const inList = Number.isFinite(initN) && available.includes(initN);
+    if (Number.isFinite(initN) && !inList) {
         const opt = document.createElement('option');
         opt.value = String(initN);
         opt.textContent = `GPIO ${initN} (non-standard)`;
         select.insertBefore(opt, select.firstChild);
     }
-    select.value = String(Number.isFinite(initN) ? initN : lo);
+    select.value = String(Number.isFinite(initN) ? initN : available[0]);
     wrap.appendChild(select);
 
     wrap.getValue = () => Number(select.value);
@@ -157,7 +165,7 @@ function unknownTypeBuilder(entry, initial) {
 }
 
 const BUILDERS = {
-    pin_id:       (entry, initial) => pinIdSelect(entry, initial),
+    pin_id:       (entry, initial, ctx) => pinIdSelect(entry, initial, ctx),
 
     milliseconds: (entry, initial) =>
         numberInput(entry, initial, { min: 0, step: 1, suffix: 'ms' }),
@@ -172,13 +180,10 @@ const BUILDERS = {
     boolean:      (entry, initial) => booleanCheckbox(entry, initial),
 };
 
-// Main entry: given a config-schema entry and an initial value (or
-// undefined), produce a DOM input.
-export function buildControl(entry, initial) {
+// Main entry: given a config-schema entry, an initial value, and an
+// optional context (currently `{ boardPins }` for pin_id dropdowns),
+// produce a DOM input.
+export function buildControl(entry, initial, ctx) {
     const builder = BUILDERS[entry.type] || unknownTypeBuilder;
-    return builder(entry, initial);
+    return builder(entry, initial, ctx);
 }
-
-// Exposed for app.js so conflict checks can reason about the board
-// pin set without re-declaring it.
-export function getBoardPins() { return BOARD_PINS; }

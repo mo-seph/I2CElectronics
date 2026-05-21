@@ -237,6 +237,21 @@ body {
     margin-top: 0.1rem;
 }
 
+/* Per-element card flag — set when any pin field on this card conflicts.
+   Stays visible even when the config block is collapsed, so the user
+   doesn't miss the conflict in compact view. */
+.element-card.has-pin-conflict {
+    border: 1px solid #f97066;
+    box-shadow: 0 0 0 2px #fecdca;
+}
+.element-card.has-pin-conflict .element-header::after {
+    content: "⚠ pin conflict";
+    font-size: 0.7rem;
+    color: #b42318;
+    margin-left: 0.5rem;
+    align-self: center;
+}
+
 .error-text { color: #b42318; }
 
 /* ---- Simple native <dialog> — used for Add Element etc. ---- */

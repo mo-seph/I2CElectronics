@@ -1,48 +1,50 @@
 // StatusLed.h
 //
-// The single onboard WS2812B (GPIO 21 on the Waveshare ESP32-S3-Zero)
-// drives a tiny state machine so it can signal several things:
+// A small state machine driving a single WS2812 (NeoPixel) status LED.
 //
 //   Solid         — base role colour (green = Peripheral, cyan = Central)
-//   Pulse(c, ms)  — briefly show an override colour, then revert
-//                   (e.g. white flash on successful cfg/board save)
-//   Blink(ms)     — flash the base colour on/off for a duration
-//                   (used by the `blink` command to identify a device)
-//   Dark(ms)      — LED off for a duration (used by `ledoff` to spot
-//                   crashed/stuck boards against a sea of dark ones)
+//   Pulse(c, ms)  — briefly show an override colour, then revert to Solid
+//                   (used for "cfg saved" confirmation flashes)
+//   Blink(ms)     — flash the base colour on/off for a duration, then
+//                   revert to Solid (used by the `blink` identify command)
+//   Dark(ms)      — LED off for a duration, then revert to Solid (used by
+//                   `ledoff` to spot crashed boards against a sea of dark)
 //
-// `update(now)` must be called every loop tick — it advances transient
-// modes back to Solid when their timer expires. LED hardware writes are
-// throttled: we only call `pixel.show()` when the displayed colour
-// actually changes.
+// `update(now)` must be called every loop tick to advance transient modes
+// back to Solid when their timer expires.
+//
+// Configured at runtime from /board.json (`status_led` block: `pin` and
+// `color_order`).  Omit the block, or set `pin` to a negative value, to
+// run without a status LED.
 
 #pragma once
 
 #include <stdint.h>
 
+struct StatusLedConfig {
+    int  pin = -1;              // GPIO; negative disables the LED entirely
+    char colorOrder[8] = "GRB"; // any 3-letter R/G/B permutation
+};
+
 namespace StatusLed {
 
-// Call once in setup() before any of the other functions.
-void begin();
+// Apply the config and bring the hardware up. Safe to call once after
+// board.json has been parsed.
+void begin(const StatusLedConfig& cfg);
 
-// Set the base role colour and show it immediately (mode = Solid).
+// Set the base role colour (mode = Solid) and write it.
 void setSolid(uint8_t r, uint8_t g, uint8_t b);
 
-// Show a single colour for `ms` milliseconds, then return to Solid
-// with the previous base colour. Good for transient feedback (cfg
-// save, errors, etc.).
+// Show a single colour for `ms` milliseconds, then return to Solid.
 void beginPulse(uint8_t r, uint8_t g, uint8_t b, uint32_t ms);
 
-// Flash the base colour on and off for `ms` milliseconds, then return
-// to Solid. Used by the `blink` identify command.
+// Flash the base colour on and off for `ms` ms, then return to Solid.
 void beginBlink(uint32_t ms);
 
-// Turn the LED off for `ms` milliseconds, then return to Solid. Used
-// by the `ledoff` census command.
+// Turn the LED off for `ms` ms, then return to Solid.
 void beginDark(uint32_t ms);
 
-// Convenience: set LED off right now, leave Solid base colour unchanged.
-// (For clean shutdown states.)
+// Off right now, no mode change.
 void off();
 
 // Advance the state machine. Call from loop() each iteration.

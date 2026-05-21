@@ -39,6 +39,17 @@ bool ConfigLoader::loadBoardConfig(BoardConfig& out) {
     if (doc["i2c_address"].is<int>()) {
         out.i2cAddress = (uint8_t)doc["i2c_address"].as<int>();
     }
+
+    // status_led block — optional. Missing or pin<0 → no LED.
+    JsonVariantConst led = doc["status_led"];
+    if (led.is<JsonObjectConst>()) {
+        out.statusLed.pin = led["pin"] | -1;
+        const char* order = led["color_order"] | "GRB";
+        size_t cap = sizeof(out.statusLed.colorOrder);
+        strncpy(out.statusLed.colorOrder, order, cap - 1);
+        out.statusLed.colorOrder[cap - 1] = 0;
+    }
+
     return true;
 }
 

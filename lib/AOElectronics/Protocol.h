@@ -52,6 +52,7 @@ namespace AOProtocol {
     static const uint8_t TYPE_SERVO_MOTOR     = 2;
     static const uint8_t TYPE_SERVO_ARM       = 3;
     static const uint8_t TYPE_CONTINUOUS_SERVO = 4;
+    static const uint8_t TYPE_BLDC_MOTOR      = 5;
 
     // Board limits
     static const uint8_t MAX_ELEMENTS_PER_BOARD = 16;

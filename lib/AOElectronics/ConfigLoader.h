@@ -1,20 +1,23 @@
 // ConfigLoader.h
 //
-// Loads a Peripheral's configuration from LittleFS:
+// Loads a board's configuration from LittleFS:
+//   - /board.json  : board-specific settings (i2c_address, status_led).
 //   - /config.json : list of Elements and their config values (see
 //                    shared/example_elements.json for the schema).
-//   - /board.json  : board-specific settings, currently just "i2c_address".
 //
 // The Peripheral calls ElementFactory for each entry in config.json and
-// stores the resulting Element*s in an array owned by the caller.
+// stores the resulting Element*s in an array owned by the caller. The
+// Central uses only board.json (status_led; i2c_address is ignored).
 
 #pragma once
 
 #include "Element.h"
 #include "Protocol.h"
+#include "StatusLed.h"
 
 struct BoardConfig {
-    uint8_t i2cAddress = 0x10; // default if board.json is missing/invalid
+    uint8_t         i2cAddress = 0x10; // peripheral only; ignored on central
+    StatusLedConfig statusLed;         // defaults to type=NONE
 };
 
 class ConfigLoader {

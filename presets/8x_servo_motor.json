@@ -12,31 +12,31 @@
   {
     "index": 3,
     "type": "SERVO_MOTOR",
-    "config": { "SERVO_PIN": 4, "MIN_POSITION": 0, "MAX_POSITION": 180 }
+    "config": { "SERVO_PIN": 3, "MIN_POSITION": 0, "MAX_POSITION": 180 }
   },
   {
     "index": 4,
     "type": "SERVO_MOTOR",
-    "config": { "SERVO_PIN": 5, "MIN_POSITION": 0, "MAX_POSITION": 180 }
+    "config": { "SERVO_PIN": 4, "MIN_POSITION": 0, "MAX_POSITION": 180 }
   },
   {
     "index": 5,
     "type": "SERVO_MOTOR",
-    "config": { "SERVO_PIN": 6, "MIN_POSITION": 0, "MAX_POSITION": 180 }
+    "config": { "SERVO_PIN": 43, "MIN_POSITION": 0, "MAX_POSITION": 180 }
   },
   {
     "index": 6,
     "type": "SERVO_MOTOR",
-    "config": { "SERVO_PIN": 7, "MIN_POSITION": 0, "MAX_POSITION": 180 }
+    "config": { "SERVO_PIN": 44, "MIN_POSITION": 0, "MAX_POSITION": 180 }
   },
   {
     "index": 7,
     "type": "SERVO_MOTOR",
-    "config": { "SERVO_PIN": 10, "MIN_POSITION": 0, "MAX_POSITION": 180 }
+    "config": { "SERVO_PIN": 7, "MIN_POSITION": 0, "MAX_POSITION": 180 }
   },
   {
     "index": 8,
     "type": "SERVO_MOTOR",
-    "config": { "SERVO_PIN": 18, "MIN_POSITION": 0, "MAX_POSITION": 180 }
+    "config": { "SERVO_PIN": 8, "MIN_POSITION": 0, "MAX_POSITION": 180 }
   }
 ]
